@@ -8,7 +8,8 @@ cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
 
 __global__ void addKernel(int *c, const int *a, const int *b)
 {
-    int i = threadIdx.x;
+    //int i = threadIdx.x;	// 这是线程并行的代码
+	int i = blockIdx.x;	// 这是块并行的代码
     c[i] = a[i] + b[i];
 }
 
@@ -108,7 +109,19 @@ cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size)
 	// 运行核函数
     //addKernel<<<1, size>>>(dev_c, dev_a, dev_b);   //原来的.
 
-	addKernel << <1, size >> >(dev_c, dev_a, dev_b);  // 第五节:线程并行 
+	//addKernel << <1, size >> >(dev_c, dev_a, dev_b);  // 第五节:线程并行 
+	//addKernel << <size, 1 >> >(dev_c, dev_a, dev_b);	// 第六节:块并行
+	
+	cudaStream_t stream[5];	// 第七节:流并行
+	for (int i = 0; i < 5; i++)
+	{
+		cudaStreamCreate(&stream[i]);	// 创建流
+	}
+
+	for (int i = 0; i < 5; i++)
+	{
+		addKernel << <1, 1, 0, stream[i] >> >(dev_c + i, dev_a + i, dev_b + i);	// 执行流
+	}
 
     // Check for any errors launching the kernel
     cudaStatus = cudaGetLastError();
@@ -134,6 +147,12 @@ cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size)
     }
 
 Error:
+	// 第七节:流并行
+	for (int i = 0; i < 5; i++)
+	{
+		cudaStreamDestroy(stream[i]);	// 销毁流
+	}
+
     cudaFree(dev_c);	// 释放GPU设备端内存
     cudaFree(dev_a);
     cudaFree(dev_b);
