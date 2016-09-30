@@ -1,5 +1,5 @@
 
-#include "cuda_runtime.h"
+#include "cuda_runtime.h"	// cuda运行时API
 #include "device_launch_parameters.h"
 
 #include <stdio.h>
@@ -18,7 +18,8 @@ int main()
     const int a[arraySize] = { 1, 2, 3, 4, 5 };
     const int b[arraySize] = { 10, 20, 30, 40, 50 };
     int c[arraySize] = { 0 };
-	
+
+	// Add vectors in parallel
 	// 第四节里面: 加深对设备的认识里所做的修改
 	cudaError_t cudaStatus;
 	int num = 0;
@@ -54,21 +55,23 @@ int main()
 }
 
 // Helper function for using CUDA to add vectors in parallel.
+// 重点理解这个函数
 cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size)
 {
-    int *dev_a = 0;
+    int *dev_a = 0;	// GPU设备端数据指针
     int *dev_b = 0;
     int *dev_c = 0;
-    cudaError_t cudaStatus;
+    cudaError_t cudaStatus;	// 状态指示
 
     // Choose which GPU to run on, change this on a multi-GPU system.
-    cudaStatus = cudaSetDevice(0);
+    cudaStatus = cudaSetDevice(0);	// 选择运行平台
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
         goto Error;
     }
 
     // Allocate GPU buffers for three vectors (two input, one output)    .
+	// 分配GPU设备端内存
     cudaStatus = cudaMalloc((void**)&dev_c, size * sizeof(int));
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaMalloc failed!");
@@ -88,6 +91,7 @@ cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size)
     }
 
     // Copy input vectors from host memory to GPU buffers.
+	// 拷贝数据到GPU
     cudaStatus = cudaMemcpy(dev_a, a, size * sizeof(int), cudaMemcpyHostToDevice);
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaMemcpy failed!");
@@ -101,7 +105,10 @@ cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size)
     }
 
     // Launch a kernel on the GPU with one thread for each element.
-    addKernel<<<1, size>>>(dev_c, dev_a, dev_b);
+	// 运行核函数
+    //addKernel<<<1, size>>>(dev_c, dev_a, dev_b);   //原来的.
+
+	addKernel << <1, size >> >(dev_c, dev_a, dev_b);  // 第五节:线程并行 
 
     // Check for any errors launching the kernel
     cudaStatus = cudaGetLastError();
@@ -119,6 +126,7 @@ cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size)
     }
 
     // Copy output vector from GPU buffer to host memory.
+	// 拷贝结构回主机.
     cudaStatus = cudaMemcpy(c, dev_c, size * sizeof(int), cudaMemcpyDeviceToHost);
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaMemcpy failed!");
@@ -126,7 +134,7 @@ cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size)
     }
 
 Error:
-    cudaFree(dev_c);
+    cudaFree(dev_c);	// 释放GPU设备端内存
     cudaFree(dev_a);
     cudaFree(dev_b);
     
