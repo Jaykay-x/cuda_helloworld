@@ -18,9 +18,22 @@ int main()
     const int a[arraySize] = { 1, 2, 3, 4, 5 };
     const int b[arraySize] = { 10, 20, 30, 40, 50 };
     int c[arraySize] = { 0 };
+	
+	// 第四节里面: 加深对设备的认识里所做的修改
+	cudaError_t cudaStatus;
+	int num = 0;
+	cudaDeviceProp prop;
+	cudaStatus = cudaGetDeviceCount(&num);
+
+	for (int i = 0; i < num; i++)
+	{
+		cudaGetDeviceProperties(&prop, i);
+		printf("This DisplayCard is: %s\n\nClockRate is: %d \n\nCuda Version:%d.%d\n\n", prop.name, prop.clockRate, prop.major, prop.minor);
+	}
+	cudaStatus = addWithCuda(c, a, b, arraySize);
 
     // Add vectors in parallel.
-    cudaError_t cudaStatus = addWithCuda(c, a, b, arraySize);
+    /*cudaError_t*/ cudaStatus = addWithCuda(c, a, b, arraySize);
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "addWithCuda failed!");
         return 1;
